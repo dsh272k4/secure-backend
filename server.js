@@ -26,72 +26,78 @@ const PORT = process.env.PORT || 3001;
 const logDir = path.resolve("logs");
 if (!fs.existsSync(logDir)) fs.mkdirSync(logDir, { recursive: true });
 
-/* ==============================
-   🧱 CẤU HÌNH CORS CHO FRONTEND
-================================ */
+/* ======================================================
+   🧱 FIX CORS CHO RENDER + HOSTINGER (QUAN TRỌNG)
+====================================================== */
 const allowedOrigins = [
     "https://dta2k4.shop",
     "https://www.dta2k4.shop",
     "http://localhost:3000",
 ];
 
+// ✅ Xử lý thủ công preflight (OPTIONS)
+app.use((req, res, next) => {
+    const origin = req.headers.origin;
+    if (allowedOrigins.includes(origin)) {
+        res.header("Access-Control-Allow-Origin", origin);
+    }
+    res.header("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS");
+    res.header(
+        "Access-Control-Allow-Headers",
+        "Content-Type,Authorization,X-Requested-With,Accept"
+    );
+    res.header("Access-Control-Allow-Credentials", "true");
+
+    if (req.method === "OPTIONS") {
+        return res.sendStatus(204); // ✅ Trả về nhanh cho preflight
+    }
+    next();
+});
+
+// ✅ Dự phòng thêm middleware CORS của Express
 app.use(
     cors({
-        origin: function (origin, callback) {
-            if (!origin || allowedOrigins.includes(origin)) {
-                callback(null, true);
-            } else {
-                console.warn("❌ Blocked by CORS:", origin);
-                callback(new Error("Not allowed by CORS"));
-            }
-        },
+        origin: allowedOrigins,
         credentials: true,
-        methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-        allowedHeaders: [
-            "Content-Type",
-            "Authorization",
-            "X-Requested-With",
-            "Accept",
-        ],
     })
 );
 
-/* ==============================
-   🛡️ CÁC MIDDLEWARE BẢO MẬT
-================================ */
-app.use(helmet()); // chặn clickjacking, XSS, sniffing, v.v.
+/* ======================================================
+   🛡️ MIDDLEWARE BẢO MẬT
+====================================================== */
+app.use(helmet()); // chống clickjacking, sniffing, XSS
 app.use(express.json());
 app.use(rateLimit({ windowMs: 60 * 1000, max: 100 })); // giới hạn 100 request/phút/IP
 app.use(simpleWAF); // tường lửa ứng dụng đơn giản
 
-/* ==============================
-   🧠 KIỂM TRA KẾT NỐI DATABASE
-================================ */
+/* ======================================================
+   🧠 KIỂM TRA DATABASE
+====================================================== */
 pool
     .query("SELECT 1")
     .then(() => console.log("✅ MySQL connected"))
     .catch((e) => console.error("MySQL connection error:", e));
 
-/* ==============================
-   🚏 ĐỊNH NGHĨA CÁC ROUTES
-================================ */
+/* ======================================================
+   🚏 ROUTES
+====================================================== */
 app.use("/api", authRoutes);
 app.use("/api", adminRoutes);
 app.use("/api", logRoutes);
 
-// Middleware kiểm tra hết hạn mật khẩu (chạy sau verifyToken)
+// Kiểm tra hết hạn mật khẩu (chạy sau verifyToken)
 app.use("/api", verifyToken, checkPasswordExpiry);
 
-/* ==============================
+/* ======================================================
    💚 HEALTH CHECK
-================================ */
+====================================================== */
 app.get("/health", (req, res) =>
     res.json({ status: "ok", time: new Date().toISOString() })
 );
 
-/* ==============================
-   👑 TẠO ADMIN MẶC ĐỊNH (NẾU CHƯA CÓ)
-================================ */
+/* ======================================================
+   👑 ĐẢM BẢO ADMIN MẶC ĐỊNH TỒN TẠI
+====================================================== */
 async function ensureAdmin() {
     try {
         const [rows] = await pool.query(
@@ -116,10 +122,10 @@ async function ensureAdmin() {
 }
 ensureAdmin();
 
-/* ==============================
+/* ======================================================
    🚀 KHỞI ĐỘNG SERVER
-================================ */
+====================================================== */
 app.listen(PORT, () => {
     console.log(`✅ Backend running on http://localhost:${PORT}`);
-    console.log(`🌐 Accepting requests from: ${allowedOrigins.join(", ")}`);
+    console.log(`🌐 CORS enabled for: ${allowedOrigins.join(", ")}`);
 });
