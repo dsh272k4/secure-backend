@@ -44,14 +44,14 @@ app.use("/api", verifyToken, checkPasswordExpiry);
 app.get("/health", (req, res) => res.json({ status: "ok", time: new Date().toISOString() }));
 
 // ensure default admin exists (optional)
-import bcrypt from "bcrypt";
+import bcryptjs from "bcryptjs";
 async function ensureAdmin() {
     try {
         const [rows] = await pool.query("SELECT id FROM users WHERE role='admin' LIMIT 1");
         if (rows.length === 0) {
             // Sử dụng mật khẩu mạnh mặc định
             const strongPassword = process.env.DEFAULT_ADMIN_PASSWORD || "Admin@Secure123!";
-            const hash = await bcrypt.hash(strongPassword, 12);
+            const hash = await bcryptjs.hash(strongPassword, 12);
             const now = new Date();
 
             await pool.query(

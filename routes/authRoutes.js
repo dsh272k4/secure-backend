@@ -1,5 +1,5 @@
 import express from "express";
-import bcrypt from "bcrypt";
+import bcryptjs from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { pool } from "../config/db.js";
 import dotenv from "dotenv";
@@ -37,7 +37,7 @@ router.post("/auth/register", verifyRecaptcha, async (req, res) => {
         const [exists] = await pool.query("SELECT id FROM users WHERE username=?", [username]);
         if (exists.length) return res.status(400).json({ message: "Tên người dùng đã tồn tại" });
 
-        const hash = await bcrypt.hash(password, 12);
+        const hash = await bcryptjs.hash(password, 12);
         const now = new Date();
 
         await pool.query(
@@ -76,7 +76,7 @@ router.post("/auth/login", verifyRecaptcha, async (req, res) => {
             return res.status(403).json({ message: `Tài khoản tạm khóa, thử lại sau ${remaining}s` });
         }
 
-        const ok = await bcrypt.compare(password, user.password_hash);
+        const ok = await bcryptjs.compare(password, user.password_hash);
         if (!ok) {
             // tăng số lần đăng nhập sai
             let attempts = user.failed_login_attempts + 1;
@@ -264,7 +264,7 @@ router.put("/auth/change-password", verifyToken, async (req, res) => {
         const user = rows[0];
 
         // 3. Kiểm tra mật khẩu cũ
-        const isOldPasswordMatch = await bcrypt.compare(oldPassword, user.password_hash);
+        const isOldPasswordMatch = await bcryptjs.compare(oldPassword, user.password_hash);
         if (!isOldPasswordMatch) {
             return res.status(400).json({ message: "Mật khẩu cũ không chính xác" });
         }
@@ -285,7 +285,7 @@ router.put("/auth/change-password", verifyToken, async (req, res) => {
         }
 
         // 5. Hash và cập nhật mật khẩu mới
-        const newHash = await bcrypt.hash(newPassword, 12);
+        const newHash = await bcryptjs.hash(newPassword, 12);
         const now = new Date();
 
         await pool.query(

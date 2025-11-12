@@ -1,4 +1,4 @@
-import bcrypt from "bcrypt";
+import bcryptjs from "bcryptjs";
 
 // Chính sách mật khẩu
 export const PASSWORD_POLICY = {
@@ -59,7 +59,7 @@ export async function isPasswordInHistory(userId, newPassword, pool) {
         } else if (Array.isArray(historyData)) passwordHistory = historyData;
 
         for (const oldHash of passwordHistory) {
-            if (await bcrypt.compare(newPassword, oldHash)) return true;
+            if (await bcryptjs.compare(newPassword, oldHash)) return true;
         }
 
         return false;

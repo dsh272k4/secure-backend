@@ -1,5 +1,5 @@
 import express from "express";
-import bcrypt from "bcrypt";
+import bcryptjs from "bcryptjs";
 import fs from "fs";
 import path from "path";
 import { pool } from "../config/db.js";
@@ -53,7 +53,7 @@ router.post("/admin/users", verifyToken, requireAdmin, async (req, res) => {
         const [exists] = await pool.query("SELECT id FROM users WHERE username=?", [username]);
         if (exists.length) return res.status(400).json({ message: "Username already exists" });
 
-        const hash = await bcrypt.hash(password, 12);
+        const hash = await bcryptjs.hash(password, 12);
         const now = new Date();
 
         await pool.query(
@@ -124,7 +124,7 @@ router.put("/admin/users/:id/reset-password", verifyToken, requireAdmin, async (
         const [rows] = await pool.query("SELECT username FROM users WHERE id=?", [id]);
         if (!rows.length) return res.status(404).json({ message: "User not found" });
 
-        const hash = await bcrypt.hash(newPassword, 12);
+        const hash = await bcryptjs.hash(newPassword, 12);
         const now = new Date();
 
         await pool.query(
